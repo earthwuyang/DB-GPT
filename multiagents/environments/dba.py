@@ -57,7 +57,7 @@ def extract_alert_info(alert_info):
     alert_desc = alert_dict['alerts'][0]['annotations']['description']
     alert_desc = alert_desc.strip()
 
-    alert_exporter = alert_dict['alerts'][0]['labels']['instance']
+    alert_exporter = alert_dict['alerts'][0]['labels']['instance']  # IP:pport
     alert_exporter = alert_exporter.strip()
 
     # Critical High Warning Info

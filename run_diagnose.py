@@ -8,6 +8,8 @@ import asyncio
 import time
 from pathlib import Path
 
+from multiagents.tools.index_advisor.api import optimize_index_selection
+
 
 def create_dir_if_not_exists(dir_path):
     if not os.path.exists(dir_path):
@@ -69,6 +71,7 @@ if __name__ == "__main__":
         workload_statistics = db.obtain_historical_queries_statistics(topn=50)
     if args.enable_workload_sqls == True:
         workload_sqls = anomaly_json["workload"]
+    
 
     with open(WORKLOAD_FILE_NAME, 'w') as f:
         json.dump({'slow_queries': slow_queries, 'workload_statistics': workload_statistics,
@@ -86,8 +89,15 @@ if __name__ == "__main__":
     args.start_at_seconds = anomaly_json["start_time"]
     args.end_at_seconds = anomaly_json["end_time"]
     args.diag_id = "0"
+
+    # kwargs={'start_time': '2023-10-15 23:09:49', 'end_time': '2023-10-15 23:12:49'}
+    # index_advice=optimize_index_selection(**kwargs)
+    # print(index_advice)
+    # exit()
+
     # count the time to run main function
     start_time = time.time()
     asyncio.run(main(args))
     end_time = time.time()
     print(f"****Diagnose Finished!****\n****During Time{current_diag_time}****")
+

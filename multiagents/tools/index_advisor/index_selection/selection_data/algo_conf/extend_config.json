@@ -7,7 +7,7 @@
         {
             "name": "extend",
             "parameters": {
-                "budget_MB": 500,
+                "budget_MB": 1500,
                 "max_index_width": 2
             },
             "number_of_actual_runs": 0,

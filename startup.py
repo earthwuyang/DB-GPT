@@ -455,6 +455,7 @@ def run_webui(started_event: mp.Event = None, run_mode: str = None):
             "--theme.primaryColor", "#165dff",
             "--theme.secondaryBackgroundColor", "#f5f5f5",
             "--theme.textColor", "#000000",
+            "--server.fileWatcherType", "none"   # added by wuy due to OSError: [Errno 28] inotify watch limit reached.  # https://stackoverflow.com/questions/73027461/oserror-errno-28-inotify-watch-limit-reached
         ]
     if run_mode == "lite":
         cmd += [

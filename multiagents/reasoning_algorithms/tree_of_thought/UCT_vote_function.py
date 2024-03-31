@@ -121,6 +121,7 @@ class UCT_vote_function(base_search_method):
         # prefix = prefix.replace("{input_description}",self.env.input_description)
 
         tool_observation = [self.tree.root.env.tool_memory.to_string()]
+
         #prompt = agent._fill_prompt_template(self.tree.root.env.tool, self.tree.root.env.task_description, tool_observation, self.tree.root.messages)
         prompt = agent._fill_prompt_template(self.tree.root.env.task_description, tool_observation)
         self.role_description = agent.role_description
@@ -535,7 +536,7 @@ class UCT_vote_function(base_search_method):
                     # If the response is an action, call the tool
                     # and append the observation to tool_observation
                     parameters = []
-                    # import pdb; pdb.set_trace()
+                    # import pdb; pdb.set_trace()  # Enter the debugger at the calling stack frame. This is useful to hard-code a breakpoint at a given point in a program, even if the code is not otherwise being debugged (e.g. when an assertion fails). If given, header is printed to the console just before debugging begins.
                     if "whether_is_abnormal_metric" in parsed_response.tool:
                         
                         metric_name = self.name.lower()

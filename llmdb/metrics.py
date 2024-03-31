@@ -2,7 +2,7 @@ from configs import POSTGRESQL_CONFIG
 from llmdb.llmdb_parser import args
 import warnings
 import numpy as np
-from multiagents.utils.database import DBArgs, Database
+# from multiagents.utils.database import DBArgs, Database
 import time
 import json
 
@@ -33,8 +33,8 @@ current_diag_time = update_current_time()
 advisor = "db2advis"  # option: extend, db2advis (fast)
 
 # [workload statistics]
-dbargs = DBArgs("postgresql", config=POSTGRESQL_CONFIG)
-db = Database(dbargs, timeout=-1)
+# dbargs = DBArgs("postgresql", config=POSTGRESQL_CONFIG)
+# db = Database(dbargs, timeout=-1)
 WORKLOAD_FILE_NAME = "workload_info.json"
 
 

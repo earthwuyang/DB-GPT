@@ -1,6 +1,13 @@
 import sys
-sys.path.insert(0, '/home/wuy/DB-GPT')
-from configs import POSTGRESQL_CONFIG
+# sys.path.insert(0, '/home/wuy/DB-GPT')
+# from configs import POSTGRESQL_CONFIG
+POSTGRESQL_CONFIG = {
+  "host": "182.92.179.3",
+  "port": 5432,
+  "user": "dbmind",
+  "password": "DBMINDdbmind2020",
+  "dbname": "wuy_test"
+}
 # from multiagents.tools.index_advisor.index_selection.selection_utils.postgres_dbms import PostgresDatabaseConnector
 # from multiagents.tools.index_advisor.index_selection.selection_utils import selec_com
 # from multiagents.tools.index_advisor.configs import get_index_result
@@ -23,7 +30,6 @@ from index_eab.index_advisor.extend_algorithm import ExtendAlgorithm
 from index_eab.index_advisor.drop_algorithm import DropAlgorithm
 
 # from multiagents.tools.index_advisor.configs import get_index_result
-
 
 
 
@@ -76,26 +82,28 @@ def read_row_query(sql_list, columns, column_sampled_values, _type="template"):
         # if type == "template" and exp_conf["queries"] \
         #         and query_id + 1 not in exp_conf["queries"]:
         #     continue
-       
-        if 'insert' in query_text['sql'].lower():
-            continue
+     
+        # if 'insert' in query_text['sql'].lower():
+        #     continue
         # if 'update' in query_text['sql'].lower():
         #     continue
-        if 'delete' in query_text['sql'].lower():
-            continue
+        # if 'delete' in query_text['sql'].lower():
+        #     continue
 
+        # print(f"query_text['sql'] {query_text['sql']}")
         query = Query(query_id, query_text=query_text['sql'], frequency=query_text['frequency'])
         for column in columns:
             # column_tmp = [col for col in columns if column.name == col.name]
             if column.name in query.text.lower() and \
                     f"{column.table.name}" in query.text.lower():
                 # column.name
-                # print(f"before replace, {query.text.lower()}")
+                print(f"### query_text {query.text.lower()}")
                 query.text = replace_placeholders(query.text.lower(), column.name, column_sampled_values[column])
-                # print(f"after replace, {query.text}\n")
+
                 query.columns.append(column)
 
         workload.append(query)
+
     return workload
 
 def get_ind_cost(connector, query, indexes, mode="hypo"):
@@ -116,7 +124,7 @@ def get_ind_cost(connector, query, indexes, mode="hypo"):
 
 def get_index_result(algo, work_list, connector, columns, column_sampled_values,
                      sel_params="parameters", process=False, overhead=False):
-
+    print(f"workload_list")
     script_path = os.path.abspath(__file__)
     script_dir = os.path.dirname(script_path)
 
@@ -129,8 +137,8 @@ def get_index_result(algo, work_list, connector, columns, column_sampled_values,
     #                                        params=sel_params)[0]
     parameters = {"budget_MB": 1500, "max_index_width": 2, "max_indexes": 5, "constraint": "storage"}
     algo='extend'
-    queries=read_row_query(work_list, columns, column_sampled_values, _type="")
-    workload = Workload(queries)
+    
+    workload = Workload(read_row_query(work_list, columns, column_sampled_values, _type=""))
     # connector.enable_simulation()
     # time.sleep(.1)
     try:
@@ -165,16 +173,26 @@ def get_index_result(algo, work_list, connector, columns, column_sampled_values,
 
     no_cost, ind_cost = list(), list()
     total_no_cost, total_ind_cost = 0, 0
-    for sql in queries:
-        no_cost_ = get_ind_cost(connector, sql.text, [])
-        # print(f"no_cost_ {no_cost_}")
-        total_no_cost += round(no_cost_*sql.frequency, 2)
-        no_cost.append(no_cost_)
+    for sql in work_list:
 
-        ind_cost_ = get_ind_cost(connector, sql.text, indexes)
-        # print(f"ind_cost_ {ind_cost_}")
-        total_ind_cost += round(ind_cost_*sql.frequency, 2)
-        ind_cost.append(ind_cost_)
+        # if 'insert' in sql['sql'].lower():
+        #     continue
+        # if 'update' in sql['sql'].lower():
+        #     continue
+        # if 'delete' in sql['sql'].lower():
+        #     continue
+
+        # print(f"###  ### esti cost sql {sql}")
+        if '$' not in sql['sql']:
+            no_cost_ = get_ind_cost(connector, sql['sql'], [])
+            print(f"no_cost_ {no_cost_}")
+            total_no_cost += round(no_cost_*sql['frequency'], 2)
+            no_cost.append(no_cost_)
+
+            ind_cost_ = get_ind_cost(connector, sql['sql'], indexes)
+            print(f"ind_cost_ {ind_cost_}")
+            total_ind_cost += round(ind_cost_*sql['frequency'], 2)
+            ind_cost.append(ind_cost_)
 
     return indexes, total_no_cost, total_ind_cost
 
@@ -287,8 +305,8 @@ def optimize_index_selection(**kwargs):
         #     )
         if len(indexes) != 0:
             index_advice += (
-                f"对数据库{dbname}，推荐的索引是：{indexes}。代价从{total_no_cost}减少到{total_ind_cost}\n" if LANGUAGE == "zh"
-                else f"\t For {dbname}, the recommended indexes are: {indexes}, cost reduced from {total_no_cost} to {total_ind_cost}.\n"
+                f"对数据库{dbname}，推荐的索引是：{indexes}。\n" if LANGUAGE == "zh"
+                else f"\t For {dbname}, the recommended indexes are: {indexes}.\n"
             )
 
     return index_advice

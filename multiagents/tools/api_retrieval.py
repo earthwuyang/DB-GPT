@@ -34,7 +34,7 @@ class APICaller:
             func = self.functions[func_name]["func"]
             return func(*args, **kwargs)
         else:
-            print(f"Function '{func_name}' not registered.")
+            print(f"Function '{func_name}' not registered.")  # register is just to 
 
             return None
 

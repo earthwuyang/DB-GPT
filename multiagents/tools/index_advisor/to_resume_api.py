@@ -5,7 +5,7 @@ from configs import POSTGRESQL_CONFIG
 # from multiagents.tools.index_advisor.index_selection.selection_utils import selec_com
 # from multiagents.tools.index_advisor.configs import get_index_result
 from multiagents.tools.metrics import advisor
-from multiagents.tools.metrics import get_workload_statistics
+from multiagents.tools.metrics import get_workload_sqls
 import ast
 from multiagents.initialization import LANGUAGE
 
@@ -43,59 +43,33 @@ INDEX_SELECTION_ALGORITHMS = {
     "drop": DropAlgorithm
 
 }
-# def replace_placeholders(sql_string, substring, sampled_values):
-#     # Define the regex pattern:
-#     # 1. Locate the substring (e.g. "WHERE")
-#     # 2. Followed by any number of whitespace characters (using \s*)
-#     # 3. An operator (+/-/*/=/>/<)
-#     # 4. Followed by any number of whitespace characters (using \s*)
-
-#     # 5. A placeholder (e.g. $2, $3, etc.)
-
-#     # print(f"in replace_placeholders, {sql_string, sampled_values}")
-#     pattern = re.escape(substring) + r"\s*([\+\-*/=><])\s*(\$\d+)"
-
-#     # Replace placeholders with value 2 using re.sub
-#     def repl(match):
-#         if len(sampled_values) > 1:
-#             return substring + ' ' + match.group(1) + ' ' + str(sampled_values[0])
-#         else:
-#             return substring + ' ' + match.group(1) + ' ' + str(2)
-
-#     return re.sub(pattern, repl, sql_string)
-
-def replace_placeholders(sql_string, substring, sampled_values):
 
 
-    pattern = r"\$\d+\b"
-    return re.sub(pattern, str(sampled_values[0]) if len(sampled_values)>1 else '2', sql_string)
-
-def read_row_query(sql_list, columns, column_sampled_values, _type="template"):
+def read_row_query(sql_list, columns, _type="sql"):
     workload = list()
     for query_id, query_text in enumerate(sql_list):
         # if type == "template" and exp_conf["queries"] \
         #         and query_id + 1 not in exp_conf["queries"]:
         #     continue
-       
-        if 'insert' in query_text['sql'].lower():
-            continue
+        # if 'insert' in query_text['sql'].lower():
+        #     continue
         # if 'update' in query_text['sql'].lower():
         #     continue
-        if 'delete' in query_text['sql'].lower():
-            continue
+        # if 'delete' in query_text['sql'].lower():
+        #     continue
 
+        # print(f"query_text['sql'] {query_text['sql']}")
         query = Query(query_id, query_text=query_text['sql'], frequency=query_text['frequency'])
         for column in columns:
             # column_tmp = [col for col in columns if column.name == col.name]
             if column.name in query.text.lower() and \
                     f"{column.table.name}" in query.text.lower():
                 # column.name
-                # print(f"before replace, {query.text.lower()}")
-                query.text = replace_placeholders(query.text.lower(), column.name, column_sampled_values[column])
-                # print(f"after replace, {query.text}\n")
+                
                 query.columns.append(column)
 
         workload.append(query)
+    print(f"workload {workload}")
     return workload
 
 def get_ind_cost(connector, query, indexes, mode="hypo"):
@@ -114,7 +88,7 @@ def get_ind_cost(connector, query, indexes, mode="hypo"):
 
     return total_cost
 
-def get_index_result(algo, work_list, connector, columns, column_sampled_values,
+def get_index_result(algo, work_list, connector, columns,
                      sel_params="parameters", process=False, overhead=False):
 
     script_path = os.path.abspath(__file__)
@@ -127,10 +101,10 @@ def get_index_result(algo, work_list, connector, columns, column_sampled_values,
 
     # config = selec_com.find_parameter_list(exp_config["algorithms"][0],
     #                                        params=sel_params)[0]
-    parameters = {"budget_MB": 1500, "max_index_width": 2, "max_indexes": 5, "constraint": "storage"}
-    algo='extend'
-    queries=read_row_query(work_list, columns, column_sampled_values, _type="")
-    workload = Workload(queries)
+    parameters = {"budget_MB": 30000, "max_index_width": 2, "max_indexes": 5, "constraint": "storage"}
+    algo='extend'   # hardcoded to use extend algorithm
+    
+    workload = Workload(read_row_query(work_list, columns, _type=""))
     # connector.enable_simulation()
     # time.sleep(.1)
     try:
@@ -165,16 +139,24 @@ def get_index_result(algo, work_list, connector, columns, column_sampled_values,
 
     no_cost, ind_cost = list(), list()
     total_no_cost, total_ind_cost = 0, 0
-    for sql in queries:
-        no_cost_ = get_ind_cost(connector, sql.text, [])
-        # print(f"no_cost_ {no_cost_}")
-        total_no_cost += round(no_cost_*sql.frequency, 2)
-        no_cost.append(no_cost_)
+    for sql in work_list:
+        # if 'insert' in sql['sql'].lower():
+        #     continue
+        # if 'update' in sql['sql'].lower():
+        #     continue
+        # if 'delete' in sql['sql'].lower():
+        #     continue
+        # print(f"###  ### esti cost sql {sql}")
+        if '$' not in sql['sql']:
+            no_cost_ = get_ind_cost(connector, sql['sql'], [])
+            print(f"no_cost_ {no_cost_}")
+            total_no_cost += round(no_cost_*sql['frequency'], 2)
+            no_cost.append(no_cost_)
 
-        ind_cost_ = get_ind_cost(connector, sql.text, indexes)
-        # print(f"ind_cost_ {ind_cost_}")
-        total_ind_cost += round(ind_cost_*sql.frequency, 2)
-        ind_cost.append(ind_cost_)
+            ind_cost_ = get_ind_cost(connector, sql['sql'], indexes)
+            print(f"ind_cost_ {ind_cost_}")
+            total_ind_cost += round(ind_cost_*sql['frequency'], 2)
+            ind_cost.append(ind_cost_)
 
     return indexes, total_no_cost, total_ind_cost
 
@@ -195,25 +177,18 @@ def get_sampled_values(db_connector, column, table, sample_size=1):
 def get_columns_from_db(db_connector):
 
     tables, columns = list(), list()
-    column_sampled_values={}
     for table in db_connector.get_tables():
-        # print(f"-------------- table {table}")
         table_object = Table(table)
         tables.append(table_object)
-        # print(f"@@@@@@ cols: {db_connector.get_cols(table)}")
         for col in db_connector.get_cols(table):
  
-            sampled_values = get_sampled_values(db_connector, col, table)
-            # column_object = Column(col, sampled_values)
             
             column_object = Column(col)
             column_object.table=table_object
-            # print(f"############## col {col}, {column_object}")
-            column_sampled_values[column_object]=sampled_values
             table_object.add_column(column_object)
             columns.append(column_object)
 
-    return tables, columns, column_sampled_values
+    return tables, columns
 
 def optimize_index_selection(**kwargs):
     """optimize_index_selection(start_time : int, end_time : int) returns the recommended index by running the algorithm 'Extend'.
@@ -234,20 +209,16 @@ def optimize_index_selection(**kwargs):
 
     # 1. Split the workloads by database names
     databases = {}
-    workload_statistics = get_workload_statistics()
-    if isinstance(workload_statistics, str):
-        workload_statistics = ast.literal_eval(workload_statistics)
+    workload_sqls = get_workload_sqls()
+    if isinstance(workload_sqls, str):
+        workload_sqls = ast.literal_eval(workload_sqls)
 
-    if workload_statistics==0:
-        raise ValueError("failed to get worklaod_statistics, thus fail to recommmend indexes.") # added by wuy
-    
-    for query_template in workload_statistics:
-        database_name = query_template["dbname"]
-
+    for query, freq in workload_sqls.items():
+        database_name = "tpch"  # harded coded because workload_sqls in diagnose_test_case.txt is always tpch
         if database_name not in databases:
             databases[database_name] = []
 
-        databases[database_name].append({"sql": query_template["sql"], "frequency": query_template["calls"]})
+        databases[database_name].append({"sql": query, "frequency": freq})
 
     index_advice = "推荐的索引是：\n" if LANGUAGE == "zh" else f"Recommended indexes: \n"
 
@@ -260,25 +231,12 @@ def optimize_index_selection(**kwargs):
         db_config["postgresql"]["dbname"] = dbname
         connector = PostgresDatabaseConnector(host=db_config['postgresql']['host'], port=db_config['postgresql']['port'], user=db_config['postgresql']['user'], password=db_config['postgresql']['password'], db_name=db_config['postgresql']['dbname'])
 
-        tables, columns, column_sampled_values = get_columns_from_db(connector)  # todo sample data for each column
-        # print(f"dbname {dbname}, tables {tables}, columns {columns}")
+        tables, columns = get_columns_from_db(connector) 
 
         # 3. read the workload queries
         workload = databases[dbname]  # list of dict
-        # print(f"workload {workload}")
-        
-
-        # script_path = os.path.abspath(__file__)
-        # script_dir = os.path.dirname(script_path)
-        # # read from the logged queries recorded by the match_diagnose_knowledge function
-        # workload_file = script_dir + \
-        #                 f"/index_selection/selection_data/data_info/job_templates.sql"
-        # workload = list()
-        # with open(workload_file, "r") as rf:
-        #     for line in rf.readlines():
-        #         workload.append(line.strip())
-
-        indexes, total_no_cost, total_ind_cost = get_index_result(advisor, workload, connector, columns, column_sampled_values)
+    
+        indexes, total_no_cost, total_ind_cost = get_index_result(advisor, workload, connector, columns)
 
         # if len(indexes) != 0:
         #     index_advice += (
@@ -287,8 +245,8 @@ def optimize_index_selection(**kwargs):
         #     )
         if len(indexes) != 0:
             index_advice += (
-                f"对数据库{dbname}，推荐的索引是：{indexes}。代价从{total_no_cost}减少到{total_ind_cost}\n" if LANGUAGE == "zh"
-                else f"\t For {dbname}, the recommended indexes are: {indexes}, cost reduced from {total_no_cost} to {total_ind_cost}.\n"
+                f"对数据库{dbname}，推荐的索引是：{indexes}。\n" if LANGUAGE == "zh"
+                else f"\t For {dbname}, the recommended indexes are: {indexes}.\n"
             )
 
     return index_advice

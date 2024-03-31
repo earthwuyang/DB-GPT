@@ -162,6 +162,7 @@ def replace_placeholders(sql_string, substring, sampled_values):
     # 3. An operator (+/-/*/=/>/<)
     # 4. Followed by any number of whitespace characters (using \s*)
     # 5. A placeholder (e.g. $2, $3, etc.)
+    print(f"in replace_placeholders: {sql_string}: {sampled_values}")
     pattern = re.escape(substring) + r"\s*([\+\-*/=><])\s*(\$\d+)"
 
     # Replace placeholders with value 2 using re.sub
@@ -188,6 +189,7 @@ def read_row_query(sql_list, exp_conf, columns, type="template"):
                 # column.name
 
                 query.text['sql'] = replace_placeholders(query.text['sql'].lower(), column.name, column.sampled_values)
+                print(f"query text {query.text['sql']}")
 
                 query.columns.append(column)
 
@@ -222,7 +224,6 @@ def read_row_query(sql_list, exp_conf, columns, type="template"):
             #     query.columns.append(column)
 
         workload.append(query)
-
     logging.info("Queries read.")
     return workload
 

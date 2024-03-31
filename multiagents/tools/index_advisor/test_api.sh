@@ -1,0 +1,1 @@
+PYTHONPATH=~/DB/DB-GPT python api.py --anomaly_file ~/DB/DB-GPT/test_cases/testing_cases_3.json --config_file ~/DB/DB-GPT/config.yaml 

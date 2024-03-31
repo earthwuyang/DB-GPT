@@ -1,6 +1,6 @@
-from multiagents.tools.metric_monitor.anomaly_detection import detect_anomalies
+from llmdb.metric_monitor.anomaly_detection import detect_anomalies
 from prometheus_service.prometheus_abnormal_metric import prometheus_metrics
-from multiagents.tools.metrics import *
+from llmdb.metrics import *
 from multiagents.utils.markdown_format import generate_prometheus_chart_content
 from server.knowledge_base.kb_doc_api import search_docs, fetch_expert_kb_names
 from multiagents.initialization import LANGUAGE
@@ -26,13 +26,13 @@ def metric_analysis_results(agent_name, kb_name, alert_metric, diag_id, enable_p
 
         detailed_metrics = obtain_values_of_metrics(-1,
             metrics_list, int(start_time), int(end_time))
-    else:
+    else:  # obtain alert metrics from testing_case.json
         detailed_alert_metric = obtain_values_of_metrics(diag_id,
-            alert_metric_list, -1, 1)
+            alert_metric_list, -1, 1)  
 
         detailed_metrics = obtain_values_of_metrics(diag_id,
             metrics_list, -1, 1)
-    
+
     # identify the abnormal metrics
     top5_abnormal_metrics = {}
     top5_abnormal_metrics_map = {}
@@ -88,6 +88,9 @@ def metric_analysis_results(agent_name, kb_name, alert_metric, diag_id, enable_p
             # draw the metric chart
             chart_metric_values = [[i, str(value)] for i, value in enumerate(metric_values)]
             chart_content = generate_prometheus_chart_content(metric_name, chart_metric_values, x_label_format="%H:%M", size=(400, 225))
+            import os
+            if not os.path.exists(f'./alert_results/{current_diag_time}'):
+                os.mkdir(f'./alert_results/{current_diag_time}')
             with open(f"./alert_results/{current_diag_time}/{metric_name}.html", "w") as f:
                 f.write(chart_content)
             if LANGUAGE == "zh":
@@ -99,8 +102,7 @@ def metric_analysis_results(agent_name, kb_name, alert_metric, diag_id, enable_p
     else:
         metric_str = metric_str + "\n"
 
-    docs_query = [metric_name for metric_name in top5_abnormal_metrics]
-
+    docs_query = [metric_name for metric_name in top5_abnormal_metrics]   # node_procs_running, node_procs_blocked, node_entropy_available_bits, node_load1
     matched_docs = search_docs(str(docs_query), knowledge_base_name=kb_name, top_k=5, score_threshold=0.4)
 
     docs_str = ""
@@ -116,52 +118,11 @@ def metric_analysis_results(agent_name, kb_name, alert_metric, diag_id, enable_p
 
     return alert_metric_str + metric_str + docs_str, abnormal_metric_detailed_values
 
-    # if metric_prefix == "cpu":
-    #     docs_str = cpu_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "io":
-    #     docs_str = io_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "memory":
-    #     docs_str = memory_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "workload":
-    #     docs_str = workload_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "index":
-    #     docs_str = index_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "query":
-    #     docs_str = query_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "write":
-    #     docs_str = write_knowledge_matcher.match(top5_abnormal_metrics)
-    # elif metric_prefix == "configuration":
-    #     docs_str = configuration_knowledge_matcher.match(top5_abnormal_metrics)
-    # else:
-    #     docs_str = ""
 
 
 def workload_analysis_results(agent_name, kb_name, diag_id):
 
     workload_state = get_workload_sqls(diag_id)
-
-    # if workload_statistics != "[]" and workload_statistics != "":
-    #     workload_statistics = ast.literal_eval(workload_statistics)
-    # else:
-    #     workload_statistics = []
-
-    # workload_state = ""
-
-    # for i, query in enumerate(workload_statistics):
-    #     # workload_state += str(i + 1) + '. ' + str(query) + "\n"
-    #     if isinstance(query["total_time"], str):
-    #         query["total_time"] = float(query["total_time"])
-
-    #     query["total_time"] = "{:.2f}".format(query["total_time"])
-    #     query["sql"] = query["sql"].replace("\n", " ")
-    #     query["sql"] = query["sql"].replace("\t", " ")
-
-    #     workload_state += '\t' + str(i + 1) + '. ' + f'the query template comes from {query["dbname"]} database, is used for {query["calls"]} times, takes {query["total_time"]} seconds, and its statement is "{query["sql"]}"' + "\n"
-
-    # matching_metrics = {**detailed_abnormal_metrics}
-
-    # cache_kb = KBServiceFactory.get_service("cache", SupportedVSType.CHROMADB)
-    # docs = cache_kb.search_docs(top5_abnormal_metrics, top_k=5)
 
     if workload_state != "":
         if LANGUAGE == "zh":

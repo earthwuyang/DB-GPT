@@ -262,6 +262,7 @@ class SolverAgent(BaseAgent):
 
         relevant_tools = self.tool_matcher.query(Template(self.prompt_template).safe_substitute(
             {"chat_history": self.memory.to_string(add_sender_prefix=True)}))
+        # print(f"relevant_tools {relevant_tools}")
 
         # 目前openai给的函数调用方式是在发请求的时候作为入参，但是不太适合这里需要Thought的过程，且改动会较大，所以先不改了
         # https://github.com/openai/openai-cookbook/blob/main/examples/How_to_call_functions_with_chat_models.ipynb
@@ -273,12 +274,14 @@ class SolverAgent(BaseAgent):
         else:
             tool_desc = '### {name}\n\n{name}: {description} Parameters：{parameters}'
 
+        # for tool_definition in relevant_tools.values():
+            # print(f"tool_definition {tool_definition}")
         tools = "\n\n".join(
             [
                 tool_desc.format(
-                    name=tool_definition['name'],
-                    description=tool_definition['description'],
-                    parameters=json.dumps(tool_definition['parameters'], ensure_ascii=False)
+                    name=tool_definition.get('name') if tool_definition is not None else None,
+                    description=tool_definition.get('description') if tool_definition is not None else None,
+                    parameters=json.dumps(tool_definition.get('parameters') if tool_definition is not None else None, ensure_ascii=False)
                 ).rstrip()
                 for tool_definition in relevant_tools.values()
             ]

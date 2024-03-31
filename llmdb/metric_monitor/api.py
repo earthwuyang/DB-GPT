@@ -1,7 +1,7 @@
 import logging
-from multiagents.tools.metric_monitor.anomaly_detection import detect_anomalies
-from multiagents.tools.metrics import *
-from multiagents.tools.metric_monitor.anomaly_analysis import (
+from llmdb.metric_monitor.anomaly_detection import detect_anomalies
+from llmdb.metrics import *
+from llmdb.metric_monitor.anomaly_analysis import (
     metric_analysis_results,
     slow_query_analysis_results,
     workload_analysis_results
@@ -27,6 +27,7 @@ FUNCTION_DEFINITION = {
 }
 
 
+
 def whether_is_abnormal_metric(
         start_time: int,
         end_time: int,
@@ -39,7 +40,7 @@ def whether_is_abnormal_metric(
 
     # read metric values from the anomaly file
     metric_values = obtain_values_of_metrics(diag_id, [prometheus_metrics[metric_name]], -1, -1)
-    # print(f"metric_values {metric_values}")
+
     if len(metric_values) > 0:
         metric_values = next(iter(metric_values.values()))
         is_abnormal = detect_anomalies(
@@ -113,6 +114,7 @@ if __name__ == "__main__":
     # parameters={'start_time': '1697303655', 'end_time': '1697303804', 'metric_name': 'memory_usage', 'diag_id': '0', 'enable_prometheus': False}
     # ret=whether_is_abnormal_metric(**parameters)
     # print(ret)
-    Parameters= {'start_time': '1697303655', 'end_time': '1697303804', 'metric_name': 'CpuExpert', 'alert_metric': 'node:ins:stdload1{instance="172.27.58.65:9100"}', 'diag_id': '0', 'enable_prometheus': False}
+    Parameters= {'start_time': '1697303655', 'end_time': '1697303804', 'metric_name': 'MemoryExpert', 'alert_metric': 'node:ins:stdload1{instance="172.27.58.65:9100"}', 'diag_id': '0', 'enable_prometheus': False}
     ret=match_diagnose_knowledge(**Parameters)
-    print(ret)
+    print(f"{ret[0]}")
+    print(f"{ret[1]}")

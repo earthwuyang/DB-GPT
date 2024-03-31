@@ -27,7 +27,7 @@ class MultiAgents:
         
         # Prepare the config of the task
         task_config = prepare_task_config(task, args)
-        agent_templates = task_config["agents"]
+        agent_templates = task_config["agents"] # reporter, role_assigner, and solver
         model_type = task_config['llm_type']
         agents = {}
 
@@ -54,7 +54,7 @@ class MultiAgents:
             agent_args['role_description'] = agent_args['role_description'].replace("${agent_name}", expert_name)
             agent_args['prompt_template'] = agent_args['prompt_template'].replace("${agent_name}", expert_name)
                         
-            if agent_type not in agents:
+            if agent_type not in agents: # append CPUExpert, MemoryExpert etc. to agents['solver']
                 agents[agent_type] = [load_agent(agent_args)]
             else:
                 agents[agent_type].append(load_agent(agent_args))
@@ -80,10 +80,10 @@ class MultiAgents:
         '''
 
         # Build the environment
-        env_config = task_config["environment"]
+        env_config = task_config["environment"]  # env_type, max_turns, rule(order, visibility, selector, updater, describer)
         env_config["agents"] = agents
         env_config["reporter"] = reporter
-        env_config["task_description"] = task_config.get("task_description", "")
+        env_config["task_description"] = task_config.get("task_description", "")  # task_description is ""
 
         environment: DBAEnvironment = load_environment(env_config)
         
